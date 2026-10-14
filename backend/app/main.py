@@ -13,6 +13,8 @@ from pathlib import Path
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import Connection
+from sqlalchemy.orm import Session
 from .config import settings
 from .database import Base, SessionLocal, engine
 from .routers import router
@@ -44,7 +46,7 @@ def require_persistent_database() -> None:
         )
 
 
-def _ensure_columns() -> None:
+def _ensure_columns(connection: Connection) -> None:
     """Add columns introduced after the database was first created.
 
     ``create_all`` only creates missing *tables*; it never alters an existing
@@ -53,7 +55,7 @@ def _ensure_columns() -> None:
     query. Each statement is guarded by a live inspection so it is a no-op once
     the column exists and never runs blind against a schema we did not expect.
     """
-    inspector = inspect(engine)
+    inspector = inspect(connection)
     if "fixtures" not in inspector.get_table_names():
         return
     existing = {col["name"] for col in inspector.get_columns("fixtures")}
@@ -65,11 +67,10 @@ def _ensure_columns() -> None:
         # migration on an existing database, and that column is now unused.
         "minute_label": "ALTER TABLE fixtures ADD COLUMN minute_label VARCHAR(12)",
     }
-    with engine.begin() as conn:
-        for column, ddl in additions.items():
-            if column not in existing:
-                conn.execute(text(ddl))
-                log.info("schema: added fixtures.%s", column)
+    for column, ddl in additions.items():
+        if column not in existing:
+            connection.execute(text(ddl))
+            log.info("schema: added fixtures.%s", column)
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("goaledge")
@@ -78,14 +79,20 @@ log = logging.getLogger("goaledge")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     require_persistent_database()
-    Base.metadata.create_all(bind=engine)
-    _ensure_columns()
-    db = SessionLocal()
-    try:
-        result = seed_database(db)
-        log.info("seed: %s", result)
-    finally:
-        db.close()
+    with engine.begin() as connection:
+        if connection.dialect.name == "postgresql":
+            connection.execute(
+                text("SELECT pg_advisory_xact_lock(:lock_key)"),
+                {"lock_key": 0x474F414C45444745},
+            )
+        Base.metadata.create_all(bind=connection)
+        _ensure_columns(connection)
+        db = Session(bind=connection, join_transaction_mode="rollback_only")
+        try:
+            result = seed_database(db)
+        finally:
+            db.close()
+    log.info("seed: %s", result)
 
     # Fetch only Flashscore match/competition data in the background. External
     # bookmaker, injury and AI providers are intentionally not queried.
