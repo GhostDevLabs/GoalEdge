@@ -1805,7 +1805,7 @@ def _find_value_bets(
             fixtures = real
     out = []
     for fx in fixtures:
-        p = _get_or_cache_prediction(db, fx)
+        p = _get_or_cache_prediction(db, fx, commit=False)
         for sel in flat_selections(p):
             # A self-priced fixture has edge None and value False, so it is
             # excluded here; the explicit None check keeps that from depending
@@ -1844,6 +1844,7 @@ def _find_value_bets(
                 }
             )
 
+    db.commit()
     out.sort(key=lambda x: (x["edge"], x["expected_value"]), reverse=True)
     return {"total": len(out), "items": out[:limit]}
 
@@ -2091,7 +2092,11 @@ def stats_overview(
     upcoming_fixtures = db.scalars(
         _fixture_query().where(Fixture.status.in_(["scheduled", "live"])).limit(60)
     ).all()
-    confs = [_get_or_cache_prediction(db, fx)["confidence"] for fx in upcoming_fixtures]
+    confs = [
+        _get_or_cache_prediction(db, fx, commit=False)["confidence"]
+        for fx in upcoming_fixtures
+    ]
+    db.commit()
 
     return {
         "fixtures_total": total,
