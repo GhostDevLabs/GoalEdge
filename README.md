@@ -712,10 +712,12 @@ behind one interface:
 
 | Source | When | Notes |
 | --- | --- | --- |
-| `BADGE_DIR` (local) | whenever `<slug>.png` exists | preferred; no network, no third party |
-| Remote dataset | fallback | works out of the box for the demo |
+| `BADGE_DIR` (local) | whenever `<slug>.png` exists | preferred |
+| Explicit remote dataset map | when no local file exists and a slug is mapped | works out of the box for the demo |
 
-`LOGO_SOURCE` = `local` \| `remote` \| `auto` (default: local first).
+Flashscore-provided crests stored on synced teams take precedence in match data.
+For seeded teams without a feed crest, the explicit map resolves images from the
+football-logos dataset on GitHub; unmapped teams use a neutral glyph.
 
 **On rights.** Club crests are trademarks owned by the clubs. No logo
 aggregator can grant a licence it does not hold — several state outright that
@@ -737,8 +739,8 @@ cd backend
 .\\.venv\\Scripts\\python.exe ..\\qa\\backfill_logos.py   # updates an existing DB
 ```
 
-All 186 seeded teams currently resolve to a real badge. Clubs with no badge fall
-back to a neutral glyph, never to a broken image.
+The explicit map currently covers 140 clubs. Teams without a mapped badge or a
+crest from the live feed use a neutral glyph, never a broken image.
 
 ---
 

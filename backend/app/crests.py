@@ -9,11 +9,8 @@ A. **Local badge store** (``BADGE_DIR``) -- preferred. Point it at a folder of
    ``<slug>.png`` files and it is used for everything. This is how a deployment
    with its own licensed or self-made badges should run: no network, no third
    party, no rights question.
-B. **Remote CDN fallback** (``REMOTE_TEMPLATE``) -- used only when no local file
-   exists, so the demo works out of the box.
-
-``LOGO_SOURCE`` selects ``local`` | ``remote`` | ``auto`` (local first).
-``REMOTE_TEMPLATE_LOCAL`` is the open per-club dataset used for the fallback.
+B. **Explicit remote dataset map** (``CREST_FILES``) -- used when no local file
+   exists, so mapped seed teams have a crest before a live feed supplies one.
 
 A rights note that matters: club crests are trademarks owned by the clubs.
 Neither a CDN nor a logo aggregator can grant a licence it does not hold, and
@@ -46,8 +43,8 @@ REMOTE_TEMPLATE = "https://static.flashscore.com/res/image/data/{id}"
 #: URL prefix under which main.py serves BADGE_DIR.
 LOCAL_URL_PREFIX = "/static/badges"
 
-#: No other remote crest source is enabled.
-DATASET_RAW = ""
+#: Explicit team-to-file mappings point into this open crest dataset.
+DATASET_RAW = "https://raw.githubusercontent.com/luukhopman/football-logos/master/logos"
 
 #: Kept so existing callers/tests that reference LOGO_TEMPLATE keep working.
 LOGO_TEMPLATE = REMOTE_TEMPLATE
@@ -275,8 +272,8 @@ def _local_badge_url(slug: str) -> str | None:
 def crest_for_slug(slug: str | None) -> str | None:
     """Badge URL for a team slug, or None when nothing resolves.
 
-    A local file wins when present. No remote fallback is used here; Flashscore
-    crests come from the match feed and are stored with each team.
+    A local file wins when present. Otherwise use the explicit dataset mapping;
+    Flashscore crests stored on teams continue to take precedence in the feed.
     """
     if not slug:
         return None
@@ -285,7 +282,9 @@ def crest_for_slug(slug: str | None) -> str | None:
     local = _local_badge_url(slug)
     if local:
         return local
-    # Remote crests are sourced from Flashscore match data in sync.py.
+    dataset_path = CREST_FILES.get(slug)
+    if dataset_path:
+        return f"{DATASET_RAW}/{urllib.parse.quote(dataset_path, safe='/')}"
     return None
 
 

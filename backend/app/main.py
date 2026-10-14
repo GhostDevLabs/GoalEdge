@@ -12,11 +12,13 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, or_, select, text
 from sqlalchemy.engine import Connection
 from sqlalchemy.orm import Session
 from .config import settings
 from .database import Base, SessionLocal, engine
+from .crests import FALLBACK_LOGO, crest_for_slug
+from .models import Team
 from .routers import router
 from .seed import seed as seed_database
 
@@ -72,6 +74,21 @@ def _ensure_columns(connection: Connection) -> None:
             connection.execute(text(ddl))
             log.info("schema: added fixtures.%s", column)
 
+
+def _backfill_missing_team_crests(db: Session) -> int:
+    """Replace stored neutral placeholders with explicitly mapped team crests."""
+    teams = db.scalars(
+        select(Team).where(or_(Team.logo.is_(None), Team.logo == FALLBACK_LOGO))
+    ).all()
+    updated = 0
+    for team in teams:
+        logo = crest_for_slug(team.slug)
+        if logo:
+            team.logo = logo
+            updated += 1
+    return updated
+
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("goaledge")
 
@@ -90,9 +107,10 @@ async def lifespan(app: FastAPI):
         db = Session(bind=connection, join_transaction_mode="rollback_only")
         try:
             result = seed_database(db)
+            crests_updated = _backfill_missing_team_crests(db)
         finally:
             db.close()
-    log.info("seed: %s", result)
+    log.info("seed: %s; team crests updated: %s", result, crests_updated)
 
     # Fetch only Flashscore match/competition data in the background. External
     # bookmaker, injury and AI providers are intentionally not queried.
@@ -143,7 +161,8 @@ class ExternalRequestPolicyMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'self' data: blob:; "
             "connect-src 'self'; "
-            "img-src 'self' data: blob: https://static.flashscore.com https://crests.football-data.org; "
+            "img-src 'self' data: blob: https://static.flashscore.com https://crests.football-data.org "
+            "https://raw.githubusercontent.com; "
             "style-src 'self' 'unsafe-inline'; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
             "font-src 'self' data:"

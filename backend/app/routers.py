@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session, selectinload
 from . import ai as ai_layer
 from .config import settings
 from .database import get_db
+from .crests import FALLBACK_LOGO, crest_for_slug
 from . import design as site_design
 from .models import (
     AdminAuditLog,
@@ -310,6 +311,12 @@ def _livescore_row(fx: Fixture, now: datetime | None = None) -> dict:
         if status == "live" and fx.kickoff
         else None
     )
+    home_logo = fx.home_team.logo
+    if not home_logo or home_logo == FALLBACK_LOGO:
+        home_logo = crest_for_slug(fx.home_team.slug) or FALLBACK_LOGO
+    away_logo = fx.away_team.logo
+    if not away_logo or away_logo == FALLBACK_LOGO:
+        away_logo = crest_for_slug(fx.away_team.slug) or FALLBACK_LOGO
     return {
         "id": str(fx.id),
         "match_id": fx.external_id,
@@ -318,8 +325,8 @@ def _livescore_row(fx: Fixture, now: datetime | None = None) -> dict:
         "country": fx.competition.country.name if fx.competition.country else None,
         "home_team": fx.home_team.name,
         "away_team": fx.away_team.name,
-        "home_logo": fx.home_team.logo,
-        "away_logo": fx.away_team.logo,
+        "home_logo": home_logo,
+        "away_logo": away_logo,
         "home_goals": fx.home_goals,
         "away_goals": fx.away_goals,
         "kickoff": fx.kickoff,
@@ -368,6 +375,10 @@ def _feed_row(m: object) -> dict:
     # Same stale rule as the database-backed row, from the same shared clock:
     # the feed's own 'live' flag is not enough to call a match in play.
     kickoff = getattr(m, "kickoff", None)
+    home_team = getattr(m, "home_team", "") or ""
+    away_team = getattr(m, "away_team", "") or ""
+    home_logo = getattr(m, "home_logo", None) or crest_for_slug(flashscore.slugify(home_team))
+    away_logo = getattr(m, "away_logo", None) or crest_for_slug(flashscore.slugify(away_team))
     clock = flashscore.live_clock(kickoff) if kickoff else {}
     if status == "live" and clock.get("stale"):
         status = "finished"
@@ -384,10 +395,10 @@ def _feed_row(m: object) -> dict:
             f"{m.country} - {m.competition}" if getattr(m, "country", None) else getattr(m, "competition", "")
         ),
         "country": getattr(m, "country", None),
-        "home_team": getattr(m, "home_team", ""),
-        "away_team": getattr(m, "away_team", ""),
-        "home_logo": getattr(m, "home_logo", None),
-        "away_logo": getattr(m, "away_logo", None),
+        "home_team": home_team,
+        "away_team": away_team,
+        "home_logo": home_logo or FALLBACK_LOGO,
+        "away_logo": away_logo or FALLBACK_LOGO,
         "home_goals": getattr(m, "home_goals", None),
         "away_goals": getattr(m, "away_goals", None),
         "kickoff": getattr(m, "kickoff", None),
