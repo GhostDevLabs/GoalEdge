@@ -13,7 +13,16 @@ class Base(DeclarativeBase):
 
 connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
 
-engine = create_engine(settings.database_url, connect_args=connect_args, future=True)
+engine_options = {"pool_pre_ping": True}
+if settings.database_url.startswith(("postgresql:", "postgres:")):
+    engine_options["pool_recycle"] = 300
+
+engine = create_engine(
+    settings.database_url,
+    connect_args=connect_args,
+    future=True,
+    **engine_options,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
 
 
