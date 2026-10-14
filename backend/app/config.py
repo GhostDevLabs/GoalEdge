@@ -1,0 +1,130 @@
+"""Application configuration loaded from environment variables / .env file."""
+from functools import lru_cache
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = BASE_DIR.parent
+
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=str(BASE_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    app_name: str = "GoalEdge AI"
+    app_description: str = "AI-powered football match predictions and betting tips"
+    version: str = "1.0.0"
+
+    # SQLite by default, which is correct for local development. On a serverless
+    # host it is not a valid fallback: ``goaledge.db`` is excluded from the
+    # deployment (see .vercelignore) and the bundle is read-only at runtime, so
+    # the default fails at startup with an opaque "unable to open database file"
+    # -- after the app appeared to boot fine. ``main.require_persistent_database``
+    # turns that into one explicit error naming the missing variable.
+    database_url: str = f"sqlite:///{(BASE_DIR / 'goaledge.db').as_posix()}"
+
+    # --- AI layer -------------------------------------------------------
+    # External AI providers are not used; analysis is generated locally.
+    openai_api_key: str | None = None
+    openai_base_url: str = "https://api.openai.com/v1"
+    openai_model: str = "gpt-4o-mini"
+    ai_timeout_seconds: float = 30.0
+
+    # --- Auth -----------------------------------------------------------
+    jwt_secret: str = "change-me-in-production-goaledge-secret"
+    jwt_algorithm: str = "HS256"
+    jwt_expire_minutes: int = 60 * 24 * 7
+
+    # --- Modelling ------------------------------------------------------
+    # Blend weight between the statistical model and the market (bookmaker)
+    # implied probabilities. 0.0 = pure model, 1.0 = pure market.
+    market_blend: float = 0.28
+    # Dixon-Coles low-score correlation parameter.
+    dixon_coles_rho: float = -0.06
+    # League-average goals per team per match, used as the Bayesian prior.
+    league_avg_goals: float = 1.32
+    # Weight applied to the prior when a team has few recorded matches.
+    prior_weight: float = 6.0
+    # Minimum edge (model prob - market prob) to flag a value bet.
+    value_edge_threshold: float = 0.045
+    # --- External bookmaker odds (disabled) ------------------------------
+    # No bookmaker data is fetched; predictions use only locally computed data.
+    odds_api_key: str | None = None
+    odds_api_base_url: str = "https://api.the-odds-api.com/v4"
+    # Each extra region costs another credit; UK books are enough for decimal
+    # 1X2 and (when the book offers it) totals.
+    odds_api_regions: str = "uk"
+    odds_api_markets: str = "h2h,totals"
+    # Free tiers are a few hundred credits a month, so a long cache is the
+    # difference between lasting the month and burning the quota on boot.
+    # 12h cache × 4 sports × 2 markets ≈ 16 credits/day, which fits a
+    # 500-credit monthly quota. Refreshing every 30 minutes with a short
+    # cache would burn the month in a few days.
+    odds_api_cache_seconds: int = 43200
+    odds_api_max_sports_per_run: int = 4
+    odds_api_timeout_seconds: float = 20.0
+    odds_api_kickoff_slack_hours: float = 8.0
+    # --- External injury data (disabled) ---------------------------------
+    # Player availability is not fetched from third-party providers.
+    api_football_key: str | None = None
+    api_football_base_url: str = "https://v3.football.api-sports.io"
+    api_football_timeout_seconds: float = 20.0
+    # --- SportMonks fixture source -----------------------------------------
+    # Match-centre data can be sourced from SportMonks when an API token is set.
+    # The token must be provided in the environment or a local .env file and is
+    # never committed to source control.
+    sportmonks_api_token: str | None = None
+    sportmonks_base_url: str = "https://api.sportmonks.com/v3"
+    sportmonks_timeout_seconds: float = 20.0
+    # Competition emblems from football-data.org. The token stays server-side;
+    # logos are fetched once per cache interval, not once per competition.
+    football_data_api_token: str | None = None
+    football_data_base_url: str = "https://api.football-data.org/v4"
+    football_data_timeout_seconds: float = 10.0
+    football_data_cache_seconds: int = 86400
+    # --- External market board (disabled) --------------------------------
+    # No bookmaker market boards are fetched.
+    sportybet_markets_enabled: bool = False
+    sportybet_base_url: str = "https://www.sportybet.com/api"
+    sportybet_country: str = "ng"
+    sportybet_product_id: int = 3
+    sportybet_timeout_seconds: float = 8.0
+    # How long a fetched market board stays fresh before it is refetched.
+    sportybet_cache_seconds: int = 90
+    # --- Flashscore fixture source ---------------------------------------
+    # The app's own demo data is simulated. When this is enabled, real
+    # matches (dates, kick-off times, statuses and results) are pulled from
+    # Flashscore's public day feed and written into the same Fixture table,
+    # so the predictions and the Results page grade real football.
+    flashscore_enabled: bool = True
+    flashscore_base_url: str = "https://www.flashscore.com"
+    # Public feed token the site itself sends; it is not a secret credential,
+    # only a request header the endpoint expects.
+    flashscore_feed_token: str = "SW9D1eZo"
+    flashscore_lang: str = "en-gh"
+    flashscore_timeout_seconds: float = 20.0
+    # Sport id 1 is football on Flashscore.
+    flashscore_sport_id: int = 1
+    # Cap on matches ingested per day so a busy Saturday cannot flood the DB.
+    flashscore_max_matches_per_day: int = 400
+    # How many days AHEAD of today each refresh pulls. The Predictions page and
+    # the sidebar's Today/Tomorrow tabs read *scheduled* fixtures, so without a
+    # forward pull tomorrow's card does not exist until tomorrow. The feed only
+    # publishes about a week forward, so this is a week rather than a season.
+    flashscore_forward_days: int = 7
+    # How often the in-process refresher re-pulls the full fixture window.
+    # Today's scores are refreshed more often while a match is near kick-off or live.
+    flashscore_refresh_seconds: int = 60
+    cors_origins: list[str] = ["*"]
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
+
+
+settings = get_settings()

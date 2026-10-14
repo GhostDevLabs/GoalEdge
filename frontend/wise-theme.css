@@ -1,0 +1,263 @@
+/* GoalEdge light-first visual refresh, inspired by Wise's calm, spacious UI. */
+:root {
+  color-scheme: light;
+  --bg: #f5f7f4;
+  --bg-soft: #fff;
+  --surface: #fff;
+  --surface-2: #edf1ec;
+  --border: #dfe5df;
+  --border-soft: rgba(27, 40, 32, 0.09);
+  --text: #16332b;
+  --text-dim: #52645d;
+  --text-faint: #78877f;
+  --accent: #1b6b50;
+  --accent-dim: #14543e;
+  --accent-soft: rgba(27, 107, 80, 0.12);
+  --link: #176b4b;
+  --link-hover: #10543a;
+  --green: #16865b;
+  --green-soft: rgba(22, 134, 91, 0.12);
+  --navy: #e7ede8;
+  --navy-soft: #eef3ef;
+  --premium: #16332b;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-lg: 22px;
+  --radius-btn: 999px;
+  --shadow: 0 2px 8px rgba(19, 47, 35, 0.035);
+  --shadow-hover: 0 10px 26px rgba(19, 47, 35, 0.09);
+  --panel-dark: #fff;
+  --on-panel-dark: #16332b;
+  --on-accent: #fff;
+  --hover-wash: rgba(27, 51, 40, 0.045);
+  --hover-wash-soft: rgba(27, 51, 40, 0.025);
+  --glass-tint: rgba(255, 255, 255, 0.92);
+  --glass-tint-strong: rgba(255, 255, 255, 0.98);
+  --glass-rim: rgba(255, 255, 255, 0.95);
+  --glass-rim-soft: rgba(27, 51, 40, 0.1);
+  --glass-refract: rgba(31, 54, 41, 0.06);
+  --glass-cast: rgba(31, 54, 41, 0.08);
+  --glass-sheen: rgba(255, 255, 255, 0.55);
+  --glass-scrim: rgba(20, 35, 27, 0.08);
+  --aura-1: rgba(33, 143, 95, 0.07);
+  --aura-2: rgba(182, 215, 125, 0.08);
+  --aura-3: rgba(111, 178, 156, 0.06);
+  --aura-blur: 110px;
+  --scheme: light;
+  --accent-dim: #14543e;
+  --amber: #c7921f;
+  --amber-soft: rgba(199, 146, 31, .15);
+  --warn: #c7921f;
+  --warn-soft: rgba(199, 146, 31, .15);
+  --danger: #c7361f;
+  --danger-soft: rgba(199, 54, 31, .15);
+  --info: #1a5f9c;
+  --info-soft: rgba(26, 95, 156, .15);
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111815;
+  --bg-soft: #1b2520;
+  --surface: #1b2520;
+  --surface-2: #141d18;
+  --border: #34443a;
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --text: #f0f4f0;
+  --text-dim: rgba(240, 244, 240, 0.72);
+  --text-faint: rgba(240, 244, 240, 0.52);
+  --accent: #78d6a5;
+  --accent-dim: #52bd86;
+  --accent-soft: rgba(120, 214, 165, 0.16);
+  --link: #a2dfbd;
+  --link-hover: #c4f0d5;
+  --green: #78d6a5;
+  --green-soft: rgba(120, 214, 165, 0.15);
+  --navy: #27352d;
+  --navy-soft: #1b2520;
+  --premium: #1b2520;
+  --panel-dark: #1b2520;
+  --on-panel-dark: #f0f4f0;
+  --on-accent: #123529;
+  --amber: #e2b95f;
+  --amber-soft: rgba(226, 185, 95, .15);
+  --warn: #e2b95f;
+  --warn-soft: rgba(226, 185, 95, .15);
+  --danger: #f18470;
+  --danger-soft: rgba(241, 132, 112, .15);
+  --info: #80c7f4;
+  --info-soft: rgba(128, 199, 244, .15);
+  --hover-wash: rgba(255, 255, 255, 0.08);
+  --hover-wash-soft: rgba(255, 255, 255, 0.05);
+  --glass-tint: rgba(255, 255, 255, 0.07);
+  --glass-tint-strong: rgba(255, 255, 255, 0.13);
+  --glass-rim: rgba(255, 255, 255, 0.34);
+  --glass-rim-soft: rgba(255, 255, 255, 0.1);
+  --glass-refract: rgba(0, 0, 0, 0.35);
+  --glass-cast: rgba(0, 0, 0, 0.35);
+  --glass-sheen: rgba(255, 255, 255, 0.35);
+  --glass-scrim: rgba(0, 0, 0, 0.42);
+  --aura-1: rgba(120, 214, 165, 0.12);
+  --aura-2: rgba(226, 185, 95, 0.07);
+  --aura-3: rgba(128, 199, 244, 0.09);
+  --scheme: dark;
+}
+
+html[data-theme="dark"] body::before { opacity: .16; }
+
+html, body {
+  font-family: Inter,
+    ui-sans-serif,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body::before {
+  opacity: 0.35;
+  filter: blur(110px);
+  animation-duration: 38s;
+}
+
+.site-header {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 0 var(--border-soft);
+}
+.brand,
+.brand:hover {
+  color: var(--text);
+}
+.brand-accent {
+  color: var(--accent);
+}
+.brand-mark {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.theme-toggle {
+  color: var(--text-dim);
+  border-color: var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.theme-toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--accent);
+}
+.tabbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.main-nav a {
+  color: var(--text-dim);
+}
+.main-nav a:hover {
+  background: var(--surface-2);
+  color: var(--text);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.main-nav a.active {
+  color: var(--on-accent);
+  background: var(--accent);
+  background-image: none;
+  box-shadow: none;
+}
+.main-nav a.active:hover { background-color: var(--accent-dim); }
+
+.site-header .btn { color: var(--text); }
+.site-header .btn-primary { color: var(--on-accent); }
+.site-header .btn:hover { background: var(--surface-2); }
+.site-header .btn-primary:hover { background: var(--accent-dim); }
+
+/* Keep stadium/stat comparison content legible on the light canvas. */
+.stats-sb {
+  --sb-page: #edf1ec;
+  --sb-panel: #ffffff;
+  --sb-raised: #f4f7f4;
+  --sb-content: #f7f9f7;
+  --sb-divider: #dfe5df;
+  --sb-line: #dfe5df;
+  --sb-text: #16332b;
+  --sb-text-dim: #52645d;
+  --sb-text-body: #52645d;
+  --sb-red: #c7361f;
+  --sb-green: #16865b;
+  --sb-green-bright: #16865b;
+  --sb-radius: 12px;
+}
+
+/* Calibration cards and prediction panels use the same quiet hierarchy. */
+.tip-card, .fixture-card, .match-card { box-shadow: var(--shadow); }
+.tip-card:hover, .fixture-card:hover, .match-card:hover {
+  border-color: rgba(27, 107, 80, .24);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 760px) {
+  .site-header .header-inner { gap: 10px; }
+  .tabbar-inner { justify-content: flex-start; }
+  .main-nav { justify-content: flex-start; }
+}
+
+.card, .side-card {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+}
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  background-image: none;
+  box-shadow: none;
+}
+.btn-primary:hover {
+  background-color: var(--accent-dim);
+  box-shadow: none;
+}
+.btn:not(.btn-primary) {
+  box-shadow: none;
+}
+.btn:not(.btn-primary):hover { background: var(--surface-2); }
+.btn::before, .btn::after, .main-nav a::before { display: none; }
+input, select, textarea {
+  border-color: var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+}
+
+/* Keep movement subtle and respect the operating-system accessibility setting. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
