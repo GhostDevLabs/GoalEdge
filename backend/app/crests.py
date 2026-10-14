@@ -39,6 +39,7 @@ LOGO_SOURCE = "flashscore"
 
 #: Flashscore crest CDN URL template; files are supplied by its match feed.
 REMOTE_TEMPLATE = "https://static.flashscore.com/res/image/data/{id}"
+FOOTBALL_DATA_TEMPLATE = "https://crests.football-data.org/{id}.png"
 
 #: URL prefix under which main.py serves BADGE_DIR.
 LOCAL_URL_PREFIX = "/static/badges"
@@ -260,6 +261,14 @@ TEAM_CRESTS: dict[str, int] = {
     "sheffield-wednesday": 345,
 }
 
+# The legacy ID table includes stale and colliding IDs. Only use these
+# independently verified IDs for clubs absent from the explicit file map.
+_VERIFIED_FALLBACK_CRESTS = {
+    "blackburn-rovers": 59,
+    "girona": 298,
+    "wrexham": 1086,
+}
+
 
 def _local_badge_url(slug: str) -> str | None:
     """URL for a locally stored badge, or None when the file is absent."""
@@ -285,6 +294,9 @@ def crest_for_slug(slug: str | None) -> str | None:
     dataset_path = CREST_FILES.get(slug)
     if dataset_path:
         return f"{DATASET_RAW}/{urllib.parse.quote(dataset_path, safe='/')}"
+    crest_id = _VERIFIED_FALLBACK_CRESTS.get(slug)
+    if crest_id:
+        return FOOTBALL_DATA_TEMPLATE.format(id=crest_id)
     return None
 
 

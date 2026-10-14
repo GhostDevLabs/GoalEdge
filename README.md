@@ -717,7 +717,9 @@ behind one interface:
 
 Flashscore-provided crests stored on synced teams take precedence in match data.
 For seeded teams without a feed crest, the explicit map resolves images from the
-football-logos dataset on GitHub; unmapped teams use a neutral glyph.
+football-logos dataset on GitHub, with a small verified football-data.org
+fallback map for clubs not in that dataset. Other unmapped teams use a neutral
+glyph.
 
 **On rights.** Club crests are trademarks owned by the clubs. No logo
 aggregator can grant a licence it does not hold — several state outright that
@@ -739,8 +741,8 @@ cd backend
 .\\.venv\\Scripts\\python.exe ..\\qa\\backfill_logos.py   # updates an existing DB
 ```
 
-The explicit map currently covers 140 clubs. Teams without a mapped badge or a
-crest from the live feed use a neutral glyph, never a broken image.
+The explicit file map currently covers 140 clubs. Teams without a mapped badge
+or a crest from the live feed use a neutral glyph, never a broken image.
 
 ---
 
