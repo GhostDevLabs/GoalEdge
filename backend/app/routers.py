@@ -624,6 +624,7 @@ def _get_or_cache_prediction(
     refresh: bool = False,
     commit: bool = True,
     team_stats_cache: dict[tuple[int, str | None], TeamStats] | None = None,
+    include_context: bool = True,
 ) -> dict:
     """Predictions for finished/scheduled matches are stable, so cache them.
 
@@ -646,7 +647,12 @@ def _get_or_cache_prediction(
         except Exception:
             pass
 
-    prediction = predict_fixture(db, fx, team_stats_cache=team_stats_cache)
+    prediction = predict_fixture(
+        db,
+        fx,
+        include_context=include_context,
+        team_stats_cache=team_stats_cache,
+    )
     import json
 
     # store without the datetime objects so JSON is lossless
@@ -2099,11 +2105,12 @@ def stats_overview(
     for fx in finished_fixtures:
         if fx.home_goals is None or fx.away_goals is None:
             continue
-        p = predict_fixture(
+        p = _get_or_cache_prediction(
             db,
             fx,
-            include_context=False,
+            commit=False,
             team_stats_cache=team_stats_cache,
+            include_context=False,
         )
         outcomes = {"home": p["home_win"], "draw": p["draw"], "away": p["away_win"]}
         pick = max(outcomes, key=lambda k: outcomes[k])
