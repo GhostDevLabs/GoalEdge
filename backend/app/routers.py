@@ -33,6 +33,7 @@ from . import sync as fixture_sync
 from .prediction import (
     OU_LINES,
     MAIN_OU_LINE,
+    TeamStats,
     apply_result_to_tips,
     collect_team_stats,
     estimate_ratings,
@@ -618,7 +619,11 @@ def _get_fixture_or_404(db: Session, fixture_id: int) -> Fixture:
 
 
 def _get_or_cache_prediction(
-    db: Session, fx: Fixture, refresh: bool = False, commit: bool = True
+    db: Session,
+    fx: Fixture,
+    refresh: bool = False,
+    commit: bool = True,
+    team_stats_cache: dict[tuple[int, str | None], TeamStats] | None = None,
 ) -> dict:
     """Predictions for finished/scheduled matches are stable, so cache them.
 
@@ -641,7 +646,7 @@ def _get_or_cache_prediction(
         except Exception:
             pass
 
-    prediction = predict_fixture(db, fx)
+    prediction = predict_fixture(db, fx, team_stats_cache=team_stats_cache)
     import json
 
     # store without the datetime objects so JSON is lossless
@@ -1789,6 +1794,7 @@ def _find_value_bets(
     limit: int = 40,
     source: str | None = None,
     competition_id: int | None = None,
+    team_stats_cache: dict[tuple[int, str | None], TeamStats] | None = None,
 ) -> dict:
     """Plain-function core of /value-bets so internal callers can reuse it."""
     threshold = min_edge if min_edge is not None else settings.value_edge_threshold
@@ -1816,7 +1822,9 @@ def _find_value_bets(
             fixtures = real
     out = []
     for fx in fixtures:
-        p = _get_or_cache_prediction(db, fx, commit=False)
+        p = _get_or_cache_prediction(
+            db, fx, commit=False, team_stats_cache=team_stats_cache
+        )
         for sel in flat_selections(p):
             # A self-priced fixture has edge None and value False, so it is
             # excluded here; the explicit None check keeps that from depending
@@ -2070,7 +2078,7 @@ def stats_overview(
     db: Session = Depends(get_db),
     user: User | None = Depends(get_optional_user),
 ):
-    now = datetime.now(timezone.utc)
+    team_stats_cache: dict[tuple[int, str | None], TeamStats] = {}
     total = db.scalar(select(func.count()).select_from(Fixture)) or 0
     upcoming = db.scalar(
         select(func.count()).select_from(Fixture).where(Fixture.status.in_(["scheduled", "live"]))
@@ -2091,20 +2099,31 @@ def stats_overview(
     for fx in finished_fixtures:
         if fx.home_goals is None or fx.away_goals is None:
             continue
-        p = predict_fixture(db, fx, include_context=False)
+        p = predict_fixture(
+            db,
+            fx,
+            include_context=False,
+            team_stats_cache=team_stats_cache,
+        )
         outcomes = {"home": p["home_win"], "draw": p["draw"], "away": p["away_win"]}
         pick = max(outcomes, key=lambda k: outcomes[k])
         actual = "home" if fx.home_goals > fx.away_goals else ("away" if fx.home_goals < fx.away_goals else "draw")
         graded += 1
         correct += 1 if pick == actual else 0
 
-    value_count = _find_value_bets(db, limit=500)["total"]
+    value_count = _find_value_bets(
+        db,
+        limit=500,
+        team_stats_cache=team_stats_cache,
+    )["total"]
 
     upcoming_fixtures = db.scalars(
         _fixture_query().where(Fixture.status.in_(["scheduled", "live"])).limit(60)
     ).all()
     confs = [
-        _get_or_cache_prediction(db, fx, commit=False)["confidence"]
+        _get_or_cache_prediction(
+            db, fx, commit=False, team_stats_cache=team_stats_cache
+        )["confidence"]
         for fx in upcoming_fixtures
     ]
     db.commit()

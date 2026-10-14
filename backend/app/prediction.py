@@ -1574,11 +1574,30 @@ def key_factors_and_risks(
 # top-level entry point
 # --------------------------------------------------------------------------
 
-def predict_fixture(db: Session, fixture: Fixture, include_context: bool = True) -> dict:
-    """Run the full prediction pipeline for one fixture."""
+def predict_fixture(
+    db: Session,
+    fixture: Fixture,
+    include_context: bool = True,
+    team_stats_cache: dict[tuple[int, str | None], TeamStats] | None = None,
+) -> dict:
+    """Run the full prediction pipeline, optionally reusing request-local team stats."""
     league = fixture.competition.avg_goals or settings.league_avg_goals
-    home_stats = collect_team_stats(db, fixture.home_team_id, source=fixture.source)
-    away_stats = collect_team_stats(db, fixture.away_team_id, source=fixture.source)
+    if team_stats_cache is None:
+        home_stats = collect_team_stats(db, fixture.home_team_id, source=fixture.source)
+        away_stats = collect_team_stats(db, fixture.away_team_id, source=fixture.source)
+    else:
+        home_key = (fixture.home_team_id, fixture.source)
+        away_key = (fixture.away_team_id, fixture.source)
+        if home_key not in team_stats_cache:
+            team_stats_cache[home_key] = collect_team_stats(
+                db, fixture.home_team_id, source=fixture.source
+            )
+        if away_key not in team_stats_cache:
+            team_stats_cache[away_key] = collect_team_stats(
+                db, fixture.away_team_id, source=fixture.source
+            )
+        home_stats = team_stats_cache[home_key]
+        away_stats = team_stats_cache[away_key]
     home_stats.name = fixture.home_team.display_name
     away_stats.name = fixture.away_team.display_name
 
