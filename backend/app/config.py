@@ -2,6 +2,7 @@
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,14 @@ class Settings(BaseSettings):
     # the default fails at startup with an opaque "unable to open database file"
     # -- after the app appeared to boot fine. ``main.require_persistent_database``
     # turns that into one explicit error naming the missing variable.
-    database_url: str = f"sqlite:///{(BASE_DIR / 'goaledge.db').as_posix()}"
+    # Vercel Preview has an isolated free Neon URL; Production keeps DATABASE_URL.
+    database_url: str = Field(
+        default=f"sqlite:///{(BASE_DIR / 'goaledge.db').as_posix()}",
+        validation_alias=AliasChoices(
+            "GOALEDGE_FREE_DATABASE_URL",
+            "DATABASE_URL",
+        ),
+    )
 
     # --- AI layer -------------------------------------------------------
     # External AI providers are not used; analysis is generated locally.
