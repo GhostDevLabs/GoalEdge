@@ -119,6 +119,13 @@ class Settings(BaseSettings):
     # How often the in-process refresher re-pulls the full fixture window.
     # Today's scores are refreshed more often while a match is near kick-off or live.
     flashscore_refresh_seconds: int = 60
+    # --- EaglePredict (disabled pending written authorization) -------------
+    # These are server-only values. The adapter intentionally makes no network
+    # request until the provider's official contract is implemented.
+    eaglepredict_enabled: bool = False
+    eaglepredict_base_url: str | None = None
+    eaglepredict_api_key: str | None = None
+    eaglepredict_timeout_seconds: float = 20.0
     cors_origins: list[str] = ["*"]
 
 

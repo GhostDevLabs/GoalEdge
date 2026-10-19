@@ -2,8 +2,33 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+class EaglePredictPredictionOut(BaseModel):
+    """Normalized shape reserved for a future authorized provider payload."""
+
+    provider_id: str
+    kickoff: datetime
+    competition: str
+    home_team: str
+    away_team: str
+    market: str
+    selection: str
+    confidence: float | None = None
+    odds: float | None = None
+
+
+class EaglePredictPredictionsResponse(BaseModel):
+    """Public contract for the opt-in EaglePredict integration endpoint."""
+
+    provider: Literal["eaglepredict"]
+    status: Literal["provider_not_configured", "provider_error", "ok"]
+    predictions: list[EaglePredictPredictionOut] = []
+    fetched_at: datetime
+    message: str
 
 
 class CountryOut(BaseModel):
