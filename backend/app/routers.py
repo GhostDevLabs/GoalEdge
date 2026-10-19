@@ -58,6 +58,7 @@ from .schemas import (
     AiAnalysisOut,
     CompetitionOut,
     CountryOut,
+    EaglePredictPredictionsResponse,
     FixtureListResponse,
     FixtureOut,
     OuLineOut,
@@ -679,6 +680,31 @@ def health(db: Session = Depends(get_db)):
         "ai_provider": "openai" if settings.openai_api_key else "goal-edge-rules",
         "server_time": datetime.now(timezone.utc).isoformat(),
     }
+
+
+@router.get("/sources/eaglepredict", tags=["meta"])
+def eaglepredict_status():
+    from .eaglepredict import status
+
+    return status()
+
+
+@router.get(
+    "/eaglepredict/predictions",
+    response_model=EaglePredictPredictionsResponse,
+    tags=["predictions"],
+    summary="Authorized EaglePredict prediction feed",
+)
+def eaglepredict_predictions():
+    """Return only authorized EaglePredict data when an official contract exists.
+
+    The default response explicitly reports ``provider_not_configured``. This
+    endpoint is separate from GoalEdge's prediction engine and never changes
+    existing fixture, result, live-score, or match-card data.
+    """
+    from .eaglepredict import provider_response
+
+    return provider_response()
 
 
 @router.get("/source/status", tags=["meta"])
